@@ -661,215 +661,270 @@
             const rightMargin = 10.6;
             const topMargin = 12.7;
             const bottomMargin = 4.8;
-            const lineHeight = 5;
+            
             let y = topMargin;
-
             const t = TRANSLATIONS[lang];
 
-            function checkPageBreak(extra = 0) {
+            function checkPageBreak(extra = 5) {
                 if (y + extra > pageHeight - bottomMargin) {
                     doc.addPage();
                     y = topMargin;
                 }
             }
 
-            // Name
-            if (cvData.nombre) {
+            function getLangStr(field) {
+                if (typeof field === 'object' && field !== null) {
+                    let val = (field[lang] || "").trim();
+                    if (!val) {
+                        let other = lang === "en" ? "es" : "en";
+                        val = (field[other] || "").trim();
+                    }
+                    return val;
+                }
+                return field ? String(field).trim() : "";
+            }
+
+            // Name (Bold 14, Centered, height 8)
+            const nombre = getLangStr(cvData.nombre);
+            if (nombre) {
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(14);
-                let w = doc.getTextWidth(cvData.nombre);
-                doc.text(cvData.nombre, (pageWidth - w) / 2, y);
-                y += lineHeight + 1;
+                let w = doc.getTextWidth(nombre);
+                doc.text(nombre, (pageWidth - w) / 2, y + 5);
+                y += 8;
             }
 
             // Contact
-            let contactParts = [];
-            const c = cvData.contacto;
-            if (c) {
-                let location = (typeof c.direccion === 'object') ? c.direccion[lang] : c.direccion;
-                if (location) contactParts.push(location);
-                if (c.email) contactParts.push(c.email);
-                if (c.telefono) contactParts.push((c.telefono_codigo ? c.telefono_codigo + ' ' : '') + c.telefono);
-                if (c.linkedin) contactParts.push(c.linkedin);
-                if (c.github) contactParts.push(c.github);
-            }
-            if (contactParts.length > 0) {
+            const c = cvData.contacto || {};
+            let tlf_code = c.telefono_codigo || "";
+            let tlf_num = c.telefono || "";
+            let tlf = (tlf_code + " " + tlf_num).trim();
+            
+            let dir_str = getLangStr(c.direccion);
+            let email_str = c.email || "";
+            let linkedin_str = c.linkedin || "";
+            
+            let raw_partes = [dir_str, email_str, tlf, linkedin_str];
+            let partes = raw_partes.filter(v => v);
+            
+            if (partes.length > 0) {
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(11);
-                let contactText = contactParts.join(' \u2022 ');
+                let contactText = partes.join('  •  ');
                 let w = doc.getTextWidth(contactText);
-                doc.text(contactText, (pageWidth - w) / 2, y);
-                y += lineHeight + 2;
-            } else {
-                y += 2;
+                doc.text(contactText, (pageWidth - w) / 2, y + 4.5);
+                y += 6;
             }
 
             function drawSectionHeading(title) {
-                checkPageBreak(10);
+                checkPageBreak(6);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(11);
-                
-                doc.setLineWidth(0.3);
-                doc.line(leftMargin, y - 4, pageWidth - rightMargin, y - 4);
-
                 let w = doc.getTextWidth(title);
-                doc.text(title, (pageWidth - w) / 2, y);
-                y += lineHeight + 1;
+                doc.text(title, (pageWidth - w) / 2, y + 4.5);
+                y += 6;
+                y += 1; // self.ln(1)
             }
 
-            // Summary
-            const sum = cvData.resumen ? cvData.resumen[lang] : "";
-            if (sum) {
-                drawSectionHeading(t.resumen);
-                doc.setFont('helvetica', 'normal');
-                let lines = doc.splitTextToSize(sum, pageWidth - leftMargin - rightMargin);
-                for (let line of lines) {
-                    checkPageBreak(lineHeight);
-                    doc.text(line, leftMargin, y);
-                    y += lineHeight;
-                }
-                y += 2;
-            }
-
-            // Education
-            if (cvData.educacion && cvData.educacion.length > 0) {
-                drawSectionHeading(t.educacion);
-                for (let ed of cvData.educacion) {
-                    checkPageBreak(lineHeight * 2);
-                    
-                    let inst = ed.institucion ? (ed.institucion[lang] || ed.institucion) : "";
-                    let loc = ed.lugar ? (ed.lugar[lang] || ed.lugar) : "";
-                    let deg = ed.titulo ? (ed.titulo[lang] || ed.titulo) : "";
-                    
-                    let d1 = formatDate(ed.fecha_inicio, lang);
-                    let d2 = formatDate(ed.fecha_fin, lang);
-                    let dates = (d1 || d2) ? (d1 + (d2 ? " - " + d2 : "")) : "";
-
-                    // Line 1: Inst (bold) | Loc (normal)
-                    doc.setFont('helvetica', 'bold');
-                    if (inst) doc.text(inst, leftMargin, y);
-                    if (loc) {
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(loc, pageWidth - rightMargin, y, {align: 'right'});
-                    }
-                    y += lineHeight;
-
-                    // Line 2: Deg (normal) | Dates (normal)
+            function drawEntryHeader(l1_left, l1_right, l2_left, l2_right, l2_bold = false) {
+                checkPageBreak(10);
+                // Line 1
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                if (l1_left) doc.text(l1_left, leftMargin, y + 4);
+                if (l1_right) {
                     doc.setFont('helvetica', 'normal');
-                    if (deg) doc.text(deg, leftMargin, y);
-                    if (dates) {
-                        doc.text(dates, pageWidth - rightMargin, y, {align: 'right'});
+                    let rw = doc.getTextWidth(l1_right);
+                    doc.text(l1_right, pageWidth - rightMargin - rw, y + 4);
+                }
+                y += 5;
+                
+                // Line 2
+                doc.setFont('helvetica', l2_bold ? 'bold' : 'normal');
+                if (l2_left) doc.text(l2_left, leftMargin, y + 4);
+                if (l2_right) {
+                    doc.setFont('helvetica', 'normal');
+                    let rw = doc.getTextWidth(l2_right);
+                    doc.text(l2_right, pageWidth - rightMargin - rw, y + 4);
+                }
+                y += 5;
+            }
+
+            function drawPlainParagraph(text, size = 11, italic = false, space_after = 2) {
+                if (!text) return;
+                doc.setFont('helvetica', italic ? 'italic' : 'normal');
+                doc.setFontSize(size);
+                let lines = doc.splitTextToSize(text, pageWidth - leftMargin - rightMargin);
+                for (let i=0; i<lines.length; i++) {
+                    checkPageBreak(5);
+                    doc.text(lines[i], leftMargin, y + 4);
+                    y += 5;
+                }
+                y += space_after;
+            }
+
+            function drawBulletPoint(text, size = 11) {
+                if (!text) return;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(size);
+                
+                let bulletStr = "•  ";
+                let bulletX = leftMargin + 5;
+                let textX = bulletX + 4;
+                let lines = doc.splitTextToSize(text, pageWidth - rightMargin - textX);
+                
+                for (let i = 0; i < lines.length; i++) {
+                    checkPageBreak(5);
+                    if (i === 0) {
+                        doc.text(bulletStr, bulletX, y + 4);
                     }
-                    y += lineHeight;
-                    y += 1;
+                    doc.text(lines[i], textX, y + 4);
+                    y += 5;
                 }
                 y += 1;
             }
 
-            // Experience
-            if (cvData.experiencia && cvData.experiencia.length > 0) {
-                let validExp = cvData.experiencia.filter(exp => {
-                    let d1 = exp.fecha_inicio;
-                    let d2 = exp.fecha_fin || new Date().toISOString().split('T')[0];
-                    if (d1) {
-                        let t1 = new Date(d1).getTime();
-                        let t2 = new Date(d2).getTime();
-                        let days = (t2 - t1) / (1000 * 3600 * 24);
-                        return days >= 90;
+            function drawSkillsParagraph(text, size = 11) {
+                if (!text) return;
+                let rawLines = text.split('\n');
+                for (let line of rawLines) {
+                    line = line.trim();
+                    if (!line) continue;
+                    
+                    if (line.startsWith('- ') || line.startsWith('  ') || line.startsWith('• ')) {
+                        line = line.substring(2).trim();
                     }
-                    return true;
-                });
-
-                if (validExp.length > 0) {
-                    drawSectionHeading(t.experiencia);
-                    for (let exp of validExp) {
-                        checkPageBreak(lineHeight * 2);
+                    
+                    let colonIdx = line.indexOf(':');
+                    if (colonIdx > 0) {
+                        let part_bold = line.substring(0, colonIdx);
+                        let part_normal = line.substring(colonIdx + 1).trim();
                         
-                        let comp = exp.empresa ? (exp.empresa[lang] || exp.empresa) : "";
-                        let loc = exp.lugar ? (exp.lugar[lang] || exp.lugar) : "";
-                        let role = exp.puesto ? (exp.puesto[lang] || exp.puesto) : "";
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(size);
+                        let prefix = part_bold + ": ";
+                        let prefix_width = doc.getTextWidth(prefix);
                         
-                        let d1 = formatDate(exp.fecha_inicio, lang);
-                        let d2 = formatDate(exp.fecha_fin, lang);
-                        let dates = (d1 || d2) ? (d1 + (d2 ? " - " + d2 : "")) : "";
-
-                        // Line 1: Company (bold) | Loc (normal)
-                        doc.setFont('helvetica', 'bold');
-                        if (comp) doc.text(comp, leftMargin, y);
-                        if (loc) {
+                        let lines = doc.splitTextToSize(part_normal, pageWidth - rightMargin - (leftMargin + prefix_width));
+                        for (let i = 0; i < lines.length; i++) {
+                            checkPageBreak(5);
+                            if (i === 0) {
+                                doc.text(prefix, leftMargin, y + 4);
+                            }
                             doc.setFont('helvetica', 'normal');
-                            doc.text(loc, pageWidth - rightMargin, y, {align: 'right'});
+                            doc.text(lines[i], leftMargin + prefix_width, y + 4);
+                            y += 5;
                         }
-                        y += lineHeight;
-
-                        // Line 2: Role (bold) | Dates (normal)
-                        doc.setFont('helvetica', 'bold');
-                        if (role) doc.text(role, leftMargin, y);
-                        if (dates) {
-                            doc.setFont('helvetica', 'normal');
-                            doc.text(dates, pageWidth - rightMargin, y, {align: 'right'});
+                    } else {
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(size);
+                        let lines = doc.splitTextToSize(line, pageWidth - rightMargin - leftMargin);
+                        for (let i = 0; i < lines.length; i++) {
+                            checkPageBreak(5);
+                            doc.text(lines[i], leftMargin, y + 4);
+                            y += 5;
                         }
-                        y += lineHeight;
+                    }
+                }
+                y += 2;
+            }
 
-                        // Achievements
-                        let ach = exp.logros ? (exp.logros[lang] || exp.logros) : "";
-                        if (ach) {
-                            let achLines = ach.split('\\n');
-                            const bulletChar = '\u2022';
-                            const bulletX = leftMargin + 5;
-                            const textX = bulletX + 4;
-                            const maxW = pageWidth - rightMargin - textX;
-                            
-                            doc.setFont('helvetica', 'normal');
-                            for (let l of achLines) {
-                                if (!l.trim()) continue;
-                                checkPageBreak(lineHeight);
-                                doc.text(bulletChar, bulletX, y);
-                                let wrappedLines = doc.splitTextToSize(l.trim(), maxW);
-                                wrappedLines.forEach((wline, i) => {
-                                    checkPageBreak(lineHeight);
-                                    doc.text(wline, textX, y);
-                                    y += lineHeight;
-                                });
+            // -- Resumen --
+            let resumen = getLangStr(cvData.resumen);
+            if (resumen) {
+                drawSectionHeading(t.resumen);
+                drawPlainParagraph(resumen);
+            }
+
+            // -- Educacion --
+            let educacion = cvData.educacion || [];
+            if (educacion.length > 0) {
+                drawSectionHeading(t.educacion);
+                for (let edu of educacion) {
+                    let f_inicio = formatDate(edu.fecha_inicio, lang);
+                    let f_fin = formatDate(edu.fecha_fin, lang);
+                    let is_presente = edu.es_presente || false;
+                    
+                    let l1_left = getLangStr(edu.institucion);
+                    let l1_right = getLangStr(edu.lugar);
+                    
+                    let fin_str = is_presente ? t.presente : f_fin;
+                    let l2_right = f_inicio ? (f_inicio + " - " + fin_str) : fin_str;
+                    let l2_left = getLangStr(edu.titulo);
+                    
+                    drawEntryHeader(l1_left, l1_right, l2_left, l2_right, false);
+                    
+                    let detalles = getLangStr(edu.detalles);
+                    if (detalles) {
+                        for (let det of detalles.split('\n')) {
+                            if (det.trim()) {
+                                drawBulletPoint(det.trim());
                             }
                         }
-                        y += 1;
                     }
-                    y += 1;
+                    y += 2;
                 }
             }
 
-            // Skills & Languages
-            let skillsParts = [];
-            if (cvData.habilidades && cvData.habilidades[lang]) {
-                skillsParts.push({ label: t.habilidades, content: cvData.habilidades[lang] });
+            // -- Experiencia --
+            let experiencia = cvData.experiencia || [];
+            let valid_experiencia = experiencia.filter(exp => {
+                let d1 = exp.fecha_inicio;
+                let d2 = exp.fecha_fin;
+                let is_pres = exp.es_presente;
+                if (!d1) return false;
+                try {
+                    let t1 = new Date(d1).getTime();
+                    let t2 = (is_pres || !d2) ? new Date().getTime() : new Date(d2).getTime();
+                    return (t2 - t1) / (1000 * 3600 * 24) >= 90;
+                } catch(e) { return false; }
+            });
+
+            if (valid_experiencia.length > 0) {
+                drawSectionHeading(t.experiencia);
+                for (let exp of valid_experiencia) {
+                    let l1_left = getLangStr(exp.empresa);
+                    let l1_right = getLangStr(exp.lugar);
+                    
+                    let f_inicio = formatDate(exp.fecha_inicio, lang);
+                    let f_fin = formatDate(exp.fecha_fin, lang);
+                    let is_presente = exp.es_presente || false;
+                    
+                    let fin_str = is_presente ? t.presente : f_fin;
+                    let l2_right = f_inicio ? (f_inicio + " - " + fin_str) : fin_str;
+                    let l2_left = getLangStr(exp.puesto);
+                    
+                    drawEntryHeader(l1_left, l1_right, l2_left, l2_right, true);
+                    
+                    let logros = getLangStr(exp.logros);
+                    if (logros) {
+                        for (let logro of logros.split('\n')) {
+                            if (logro.trim()) {
+                                drawBulletPoint(logro.trim());
+                            }
+                        }
+                    }
+                    y += 2;
+                }
             }
-            if (cvData.idiomas && cvData.idiomas[lang]) {
-                skillsParts.push({ label: t.idiomas, content: cvData.idiomas[lang] });
-            }
-            
-            if (skillsParts.length > 0) {
+
+            // -- Habilidades e Idiomas --
+            let habs = getLangStr(cvData.habilidades);
+            let idiomas = getLangStr(cvData.idiomas);
+            if (habs || idiomas) {
                 drawSectionHeading(t.habilidades);
-                for (let sp of skillsParts) {
-                    checkPageBreak(lineHeight);
-                    doc.setFont('helvetica', 'bold');
-                    const labelText = sp.label + ': ';
-                    doc.text(labelText, leftMargin, y);
-                    const labelW = doc.getTextWidth(labelText);
-                    
-                    doc.setFont('helvetica', 'normal');
-                    const contentLines = doc.splitTextToSize(sp.content, pageWidth - rightMargin - leftMargin - labelW);
-                    
-                    doc.text(contentLines[0], leftMargin + labelW, y);
-                    for (let i = 1; i < contentLines.length; i++) {
-                        y += lineHeight;
-                        checkPageBreak(lineHeight);
-                        doc.text(contentLines[i], leftMargin + labelW, y);
-                    }
-                    y += lineHeight;
+                if (habs) {
+                    drawSkillsParagraph(habs);
+                }
+                if (idiomas) {
+                    let prefix = lang === "es" ? "Idiomas: " : "Language: ";
+                    let idiomas_formatted = (idiomas.toLowerCase().startsWith("idiomas") || idiomas.toLowerCase().startsWith("language")) 
+                        ? idiomas : (prefix + idiomas);
+                    drawSkillsParagraph(idiomas_formatted);
                 }
             }
 
+            // Output
             if (isAutoRefresh) {
                 const blobUrl = doc.output('bloburl');
                 const viewer = document.getElementById('pdf-viewer');
@@ -882,7 +937,8 @@
                 if (chk && chk.checked) {
                     prefix = new Date().toISOString().split('T')[0] + "_";
                 }
-                doc.save(prefix + "CV_" + (cvData.nombre || "Document") + ".pdf");
+                let fname = cvData.nombre || "Document";
+                doc.save(prefix + "CV_" + fname + ".pdf");
             }
         }
     </script>
