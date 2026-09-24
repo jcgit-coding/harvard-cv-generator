@@ -938,6 +938,7 @@
                     prefix = new Date().toISOString().split('T')[0] + "_";
                 }
                 let fname = cvData.nombre || "Document";
+                saveJSON(); // Descargar JSON junto con el PDF
                 doc.save(prefix + "CV_" + fname + ".pdf");
             }
         }
