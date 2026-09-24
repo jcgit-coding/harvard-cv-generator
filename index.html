@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harvard CV Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#000000' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f5f5f7; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        .nav-link.active { background-color: #e5e7eb; color: #111827; font-weight: 600; }
+        .input-field {
+            width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px;
+            font-size: 0.9rem; transition: all 0.2s; outline: none;
+        }
+        .input-field:focus:not([readonly]) { border-color: #000000; box-shadow: 0 0 0 1px #000000; }
+        .label-text { display: block; font-size: 0.8rem; font-weight: 600; color: #4b5563; margin-bottom: 6px; }
+        .card { background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px; margin-bottom: 16px; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex text-slate-800">
+
+    <!-- Sidebar -->
+    <aside class="w-60 bg-[#f5f5f7] border-r border-slate-200 flex flex-col z-10 shrink-0">
+        <div class="p-6 pb-2">
+            <h1 class="text-xl font-bold flex items-center gap-2 text-slate-900 tracking-tight">
+                Harvard CV
+            </h1>
+        </div>
+        <nav class="flex-1 px-3 py-4 space-y-1">
+            <a href="#" onclick="showSection('personal')" class="flex items-center gap-3 px-3 py-2 text-sm rounded-md text-slate-600 transition hover:bg-slate-200/50 nav-link active" id="nav-personal">
+                <i data-lucide="user" class="w-4 h-4"></i> Perfil (Profile)
+            </a>
+            <a href="#" onclick="showSection('summary')" class="flex items-center gap-3 px-3 py-2 text-sm rounded-md text-slate-600 transition hover:bg-slate-200/50 nav-link" id="nav-summary">
+                <i data-lucide="align-left" class="w-4 h-4"></i> Resumen (Summary)
+            </a>
+            <a href="#" onclick="showSection('experience')" class="flex items-center gap-3 px-3 py-2 text-sm rounded-md text-slate-600 transition hover:bg-slate-200/50 nav-link" id="nav-experience">
+                <i data-lucide="briefcase" class="w-4 h-4"></i> Experiencia (Experience)
+            </a>
+            <a href="#" onclick="showSection('experience_calc')" class="flex items-center gap-3 px-3 py-2 text-sm rounded-md text-slate-600 transition hover:bg-slate-200/50 nav-link" id="nav-experience_calc">
+                <i data-lucide="calculator" class="w-4 h-4"></i> Calculadora (Exp Calc)
+            </a>
+            <a href="#" onclick="showSection('education')" class="flex items-center gap-3 px-3 py-2 text-sm rounded-md text-slate-600 transition hover:bg-slate-200/50 nav-link" id="nav-education">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i> Educación (Education)
+            </a>
+            <a href="#" onclick="showSection('skills')" class="flex items-center gap-3 px-3 py-2 text-sm rounded-md text-slate-600 transition hover:bg-slate-200/50 nav-link" id="nav-skills">
+                <i data-lucide="award" class="w-4 h-4"></i> Habilidades (Skills)
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-200/60 flex flex-col items-center text-center overflow-y-auto">
+            
+            <p class="text-xs font-semibold text-slate-400 mb-2.5 uppercase tracking-wider w-full">Data</p>
+            <div class="flex flex-col gap-2.5 w-full mb-4">
+                <button onclick="saveJSON()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2.5 rounded-md flex items-center justify-center gap-2.5 text-sm font-medium transition shadow-sm">
+                    <i data-lucide="save" class="w-4 h-4"></i> Save JSON
+                </button>
+                <button onclick="document.getElementById('file-upload').click()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2.5 rounded-md flex items-center justify-center gap-2.5 text-sm font-medium transition shadow-sm">
+                    <i data-lucide="upload" class="w-4 h-4"></i> Load JSON
+                </button>
+                <input type="file" id="file-upload" accept=".json" class="hidden" onchange="loadJSON(event)">
+            </div>
+
+            <p class="text-xs font-semibold text-slate-400 mb-2.5 uppercase tracking-wider w-full border-t border-slate-200/60 pt-4">Export PDF</p>
+            
+            <div class="mb-4 flex items-center justify-center gap-2 w-full">
+                <input type="checkbox" id="chk-date-prefix" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 w-4 h-4" checked>
+                <label for="chk-date-prefix" class="text-xs font-medium text-slate-500 cursor-pointer leading-tight">Add Date Prefix<br><span class="text-[10px] text-slate-400">(YYYY-MM-DD_)</span></label>
+            </div>
+            
+            <div class="flex flex-col gap-2.5 w-full pb-2">
+                <button onclick="generatePDF('es')" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2.5 rounded-md flex items-center justify-center gap-2.5 text-sm font-medium transition shadow-sm">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download ES
+                </button>
+                <button onclick="generatePDF('en')" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2.5 rounded-md flex items-center justify-center gap-2.5 text-sm font-medium transition shadow-sm">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download EN
+                </button>
+                <button onclick="generatePDF('ambos')" class="w-full bg-slate-900 hover:bg-black text-white py-2.5 rounded-md flex items-center justify-center gap-2.5 text-sm font-medium transition shadow-sm mt-1">
+                    <i data-lucide="download-cloud" class="w-4 h-4"></i> Download BOTH
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full bg-white relative z-0 min-w-[500px]">
+        <header class="h-[72px] border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+            <div class="flex items-center gap-4">
+                <h2 class="text-xl font-bold text-slate-900 tracking-tight" id="section-title">Personal Information</h2>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8" id="form-container">
+            <!-- Injected via JS -->
+        </div>
+    </main>
+
+    <!-- PDF Viewer -->
+    <aside class="w-[45%] max-w-[800px] bg-[#f5f5f7] border-l border-slate-200 flex flex-col shrink-0">
+        <div class="h-[72px] border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
+            <h3 class="text-sm font-semibold text-slate-700">Live Preview</h3>
+            <div class="flex items-center gap-1 bg-slate-200/60 p-1 rounded-lg">
+                <button onclick="setPreviewLang('es')" id="btn-preview-es" class="px-3 py-1.5 text-xs font-semibold rounded-md transition shadow-sm bg-white text-slate-800">ES</button>
+                <button onclick="setPreviewLang('en')" id="btn-preview-en" class="px-3 py-1.5 text-xs font-semibold rounded-md transition text-slate-500 hover:text-slate-700">EN</button>
+            </div>
+        </div>
+        <div class="flex-1 p-4">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm w-full h-full overflow-hidden flex items-center justify-center relative">
+                <div id="pdf-placeholder" class="absolute flex flex-col items-center justify-center text-slate-400 gap-3">
+                    <i data-lucide="file-text" class="w-12 h-12"></i>
+                    <p class="text-sm font-medium">No PDF generated yet</p>
+                </div>
+                <iframe id="pdf-viewer" class="w-full h-full relative z-10 opacity-0 transition-opacity duration-300" src=""></iframe>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        lucide.createIcons();
+
+        let cvData = {
+            nombre: "",
+            contacto: { telefono_codigo: "", telefono: "", direccion: {es:"", en:""}, email: "", linkedin: "", github: "", portfolio: "" },
+            resumen: { es: "", en: "" },
+            educacion: [],
+            experiencia: [],
+            habilidades: { es: "", en: "" },
+            idiomas: { es: "", en: "" }
+        };
+
+        let locks = {};
+        let currentSection = 'personal';
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const el = document.activeElement;
+                    if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT')) {
+                        e.preventDefault();
+                        const wrapper = el.closest('.relative') || el.closest('.card');
+                        if (wrapper) {
+                            const lockBtn = wrapper.querySelector('button[onclick^="toggleLock"]');
+                            if (lockBtn) lockBtn.click();
+                        }
+                        el.blur();
+                    }
+                }
+            });
+
+            renderSection();
+            generatePDF(currentPreviewLang, true);
+        });
+
+        function showSection(section) {
+            currentSection = section;
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${section}`).classList.add('active');
+
+            const titles = {
+                personal: "Perfil (Personal Information)",
+                summary: "Resumen (Professional Summary)",
+                experience: "Experiencia (Work Experience)",
+                experience_calc: "Calculadora de Exp. (Experience Calculator)",
+                education: "Educación (Education)",
+                skills: "Habilidades (Skills & Languages)"
+            };
+            document.getElementById('section-title').innerText = titles[section];
+            renderSection();
+        }
+
+        function toggleLock(id) {
+            locks[id] = !locks[id];
+            cvData._locks = locks; 
+            queueRefresh();
+            renderSection();
+        }
+
+        function getLock(id) { return locks[id] !== false; }
+
+        function renderField(label, id, value, onChangeCode, isTextarea = false, heightClass = "h-24", inputType = "text", placeholder = "") {
+            const isLocked = getLock(id);
+            const lockIcon = isLocked ? 'lock' : 'unlock';
+            const attr = isLocked ? 'readonly' : '';
+            const bgClass = isLocked ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-white text-slate-900';
+            const lockBtnColor = isLocked ? 'text-slate-400' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100';
+            
+            const fieldHTML = isTextarea 
+                ? `<textarea id="${id}" placeholder="${placeholder}" onchange="${onChangeCode}" class="input-field pr-10 resize-none ${heightClass} ${bgClass}" ${attr}>${value}</textarea>`
+                : `<input type="${inputType}" id="${id}" placeholder="${placeholder}" value="${value}" onchange="${onChangeCode}" class="input-field pr-10 ${bgClass}" ${attr}>`;
+
+            return `
+                <div>
+                    <label class="label-text">${label}</label>
+                    <div class="relative">
+                        ${fieldHTML}
+                        <button onclick="toggleLock('${id}')" class="absolute right-2 top-2 p-1.5 rounded-md transition ${lockBtnColor}" title="Lock/Unlock field">
+                            <i data-lucide="${lockIcon}" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSection() {
+            const container = document.getElementById('form-container');
+            container.innerHTML = '';
+            
+            if (currentSection === 'personal') {
+                container.innerHTML = `
+                    <div class="max-w-4xl">
+                        <div class="flex flex-col gap-y-6">
+                            <div>
+                                ${renderField("Nombre / Full Name", "f_name", cvData.nombre || '', "updateData('nombre', this.value)")}
+                            </div>
+                            <div>
+                                <label class="label-text">Teléfono / Phone</label>
+                                <div class="flex gap-2 relative">
+                                    <select onchange="updateNested('contacto', 'telefono_codigo', this.value)" class="input-field w-[35%] ${getLock('f_phone') ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-white text-slate-900'}" ${getLock('f_phone') ? 'disabled' : ''}>
+                                        <option value="" ${cvData.contacto?.telefono_codigo===''?'selected':''}>Code</option>
+                                        <option value="+1" ${cvData.contacto?.telefono_codigo==='+1'?'selected':''}>+1 (US/CA)</option>
+                                        <option value="+34" ${cvData.contacto?.telefono_codigo==='+34'?'selected':''}>+34 (ES)</option>
+                                        <option value="+51" ${cvData.contacto?.telefono_codigo==='+51'?'selected':''}>+51 (PE)</option>
+                                        <option value="+52" ${cvData.contacto?.telefono_codigo==='+52'?'selected':''}>+52 (MX)</option>
+                                        <option value="+54" ${cvData.contacto?.telefono_codigo==='+54'?'selected':''}>+54 (AR)</option>
+                                        <option value="+56" ${cvData.contacto?.telefono_codigo==='+56'?'selected':''}>+56 (CL)</option>
+                                        <option value="+57" ${cvData.contacto?.telefono_codigo==='+57'?'selected':''}>+57 (CO)</option>
+                                        <option value="+58" ${cvData.contacto?.telefono_codigo==='+58'?'selected':''}>+58 (VE)</option>
+                                        <option value="+593" ${cvData.contacto?.telefono_codigo==='+593'?'selected':''}>+593 (EC)</option>
+                                    </select>
+                                    <input type="text" placeholder="Number" value="${cvData.contacto?.telefono || ''}" onchange="updateNested('contacto', 'telefono', this.value)" class="input-field flex-1 pr-10 ${getLock('f_phone') ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-white text-slate-900'}" ${getLock('f_phone') ? 'readonly' : ''}>
+                                    <button onclick="toggleLock('f_phone')" class="absolute right-2 top-2 p-1.5 rounded-md transition ${getLock('f_phone') ? 'text-slate-400' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100'}" title="Lock/Unlock field">
+                                        <i data-lucide="${getLock('f_phone') ? 'lock' : 'unlock'}" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                ${renderField("Email", "f_email", cvData.contacto?.email || '', "updateNested('contacto', 'email', this.value)")}
+                            </div>
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    ${renderField("Ubicación / Location (ES)", "f_location_es", (typeof cvData.contacto?.direccion === 'object' ? cvData.contacto.direccion.es : cvData.contacto?.direccion) || '', "updateBilingualNested('contacto', 'direccion', 'es', this.value)")}
+                                </div>
+                                <div>
+                                    ${renderField("Ubicación / Location (EN)", "f_location_en", (typeof cvData.contacto?.direccion === 'object' ? cvData.contacto.direccion.en : '') || '', "updateBilingualNested('contacto', 'direccion', 'en', this.value)")}
+                                </div>
+                            </div>
+                            <div>
+                                ${renderField("LinkedIn URL", "f_linkedin", cvData.contacto?.linkedin || '', "updateNested('contacto', 'linkedin', this.value)")}
+                            </div>
+                            <div>
+                                ${renderField("GitHub URL", "f_github", cvData.contacto?.github || '', "updateNested('contacto', 'github', this.value)")}
+                            </div>
+                            <div>
+                                ${renderField("Portfolio URL", "f_portfolio", cvData.contacto?.portfolio || '', "updateNested('contacto', 'portfolio', this.value)")}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (currentSection === 'summary') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-2 gap-8 h-full pb-4">
+                        <div class="flex flex-col h-full">
+                            ${renderField("Español", "f_sum_es", cvData.resumen?.es || '', "updateBilingual('resumen', 'es', this.value)", true, "h-full min-h-[300px]")}
+                        </div>
+                        <div class="flex flex-col h-full">
+                            ${renderField("English", "f_sum_en", cvData.resumen?.en || '', "updateBilingual('resumen', 'en', this.value)", true, "h-full min-h-[300px]")}
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (currentSection === 'experience') {
+                let html = `<div class="mb-6 flex justify-end"><button onclick="addArrayItem('experiencia')" class="bg-slate-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-black transition shadow-sm">+ Add Experience</button></div>`;
+                
+                cvData.experiencia.forEach((exp, idx) => {
+                    const lId = `exp_${idx}`;
+                    const isLocked = locks[lId];
+                    const lockIcon = isLocked ? 'lock' : 'unlock';
+                    
+                    html += `
+                    <div class="card relative pt-12">
+                        <div class="absolute top-4 right-4 flex gap-2">
+                            <button onclick="toggleLock('${lId}')" class="p-2 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-md transition" title="Lock/Unlock this block">
+                                <i data-lucide="${lockIcon}" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="removeArrayItem('experiencia', ${idx})" class="p-2 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition" ${isLocked?'style="display:none"':''} title="Delete block">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-4">
+                            <div>
+                                ${renderField("Puesto / Job Title (ES)", `exp_p_es_${idx}`, exp.puesto?.es || '', `updateArrayItem('experiencia', ${idx}, 'puesto', 'es', this.value)`)}
+                            </div>
+                            <div>
+                                ${renderField("Puesto / Job Title (EN)", `exp_p_en_${idx}`, exp.puesto?.en || '', `updateArrayItem('experiencia', ${idx}, 'puesto', 'en', this.value)`)}
+                            </div>
+                            <div>
+                                ${renderField("Empresa / Company (ES)", `exp_c_es_${idx}`, exp.empresa?.es || '', `updateArrayItem('experiencia', ${idx}, 'empresa', 'es', this.value)`)}
+                            </div>
+                            <div>
+                                ${renderField("Empresa / Company (EN)", `exp_c_en_${idx}`, exp.empresa?.en || '', `updateArrayItem('experiencia', ${idx}, 'empresa', 'en', this.value)`)}
+                            </div>
+                            <div class="col-span-2 grid grid-cols-2 gap-6">
+                                <div>
+                                    ${renderField("Fecha de Inicio / Start Date", `exp_d1_${idx}`, exp.fecha_inicio || '', `updateArrayRoot('experiencia', ${idx}, 'fecha_inicio', this.value)`, false, "", "text", "YYYY-MM-DD")}
+                                </div>
+                                <div>
+                                    ${renderField("Fecha de Fin / End Date", `exp_d2_${idx}`, exp.fecha_fin || '', `updateArrayRoot('experiencia', ${idx}, 'fecha_fin', this.value)`, false, "", "text", "YYYY-MM-DD")}
+                                </div>
+                            </div>
+                            <div class="col-span-2 grid grid-cols-2 gap-6">
+                                <div>
+                                    ${renderField("Ubicación / Location (ES)", `exp_l_es_${idx}`, exp.lugar?.es || '', `updateArrayItem('experiencia', ${idx}, 'lugar', 'es', this.value)`)}
+                                </div>
+                                <div>
+                                    ${renderField("Ubicación / Location (EN)", `exp_l_en_${idx}`, exp.lugar?.en || '', `updateArrayItem('experiencia', ${idx}, 'lugar', 'en', this.value)`)}
+                                </div>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="label-text">Logros / Achievements (Bullet points separated by newline)</label>
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div class="relative">
+                                        <textarea placeholder="ES" onchange="updateArrayItem('experiencia', ${idx}, 'logros', 'es', this.value)" class="input-field h-24 resize-none pr-10 ${locks['exp_logros_es_' + idx] ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-white text-slate-900'}" ${locks['exp_logros_es_' + idx] ? 'readonly' : ''}>${exp.logros?.es || ''}</textarea>
+                                        <button onclick="toggleLock('exp_logros_es_${idx}')" class="absolute right-2 top-2 p-1.5 rounded-md transition ${locks['exp_logros_es_' + idx] ? 'text-slate-400' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100'}" title="Lock/Unlock field">
+                                            <i data-lucide="${locks['exp_logros_es_' + idx] ? 'lock' : 'unlock'}" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    <div class="relative">
+                                        <textarea placeholder="EN" onchange="updateArrayItem('experiencia', ${idx}, 'logros', 'en', this.value)" class="input-field h-24 resize-none pr-10 ${locks['exp_logros_en_' + idx] ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-white text-slate-900'}" ${locks['exp_logros_en_' + idx] ? 'readonly' : ''}>${exp.logros?.en || ''}</textarea>
+                                        <button onclick="toggleLock('exp_logros_en_${idx}')" class="absolute right-2 top-2 p-1.5 rounded-md transition ${locks['exp_logros_en_' + idx] ? 'text-slate-400' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100'}" title="Lock/Unlock field">
+                                            <i data-lucide="${locks['exp_logros_en_' + idx] ? 'lock' : 'unlock'}" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                if(cvData.experiencia.length === 0) html += `<div class="text-center py-12 text-slate-400 font-medium">No experience added yet.</div>`;
+                container.innerHTML = html;
+            } 
+            else if (currentSection === 'experience_calc') {
+                let html = `
+                    <div class="card relative">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200">
+                                    <th class="py-3 px-2 font-semibold text-slate-700">Role</th>
+                                    <th class="py-3 px-2 font-semibold text-slate-700">Company</th>
+                                    <th class="py-3 px-2 font-semibold text-slate-700 whitespace-nowrap">Dates</th>
+                                    <th class="py-3 px-2 font-semibold text-slate-700 text-right whitespace-nowrap">Days</th>
+                                    <th class="py-3 px-2 font-semibold text-slate-700 text-right whitespace-nowrap">Months</th>
+                                    <th class="py-3 px-2 font-semibold text-slate-700 text-right whitespace-nowrap">Years</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                let totalDays = 0;
+                
+                cvData.experiencia.forEach((exp) => {
+                    const title = exp.puesto?.es || exp.puesto?.en || '-';
+                    const company = exp.empresa?.es || exp.empresa?.en || '-';
+                    const startStr = exp.fecha_inicio || '';
+                    const endStr = exp.fecha_fin || '';
+                    
+                    let days = 0;
+                    if (startStr) {
+                        const startDate = new Date(startStr);
+                        const endDate = endStr ? new Date(endStr) : new Date();
+                        const timeDiff = endDate.getTime() - startDate.getTime();
+                        if (timeDiff > 0) {
+                            days = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                            totalDays += days;
+                        }
+                    }
+                    
+                    const months = (days / 30.4).toFixed(1);
+                    const years = (days / 365).toFixed(2);
+                    
+                    html += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                            <td class="py-3 px-2 text-sm font-medium text-slate-900">${title}</td>
+                            <td class="py-3 px-2 text-sm text-slate-600">${company}</td>
+                            <td class="py-3 px-2 text-sm text-slate-500 whitespace-nowrap">
+                                <div>${startStr}</div>
+                                <div class="text-slate-400 mt-0.5">to ${endStr || 'Present'}</div>
+                            </td>
+                            <td class="py-3 px-2 text-sm font-semibold text-indigo-600 text-right whitespace-nowrap">${days}</td>
+                            <td class="py-3 px-2 text-sm text-slate-600 text-right whitespace-nowrap">${months}</td>
+                            <td class="py-3 px-2 text-sm text-slate-600 text-right whitespace-nowrap">${years}</td>
+                        </tr>
+                    `;
+                });
+                
+                const totalMonths = (totalDays / 30.4).toFixed(1);
+                const totalYears = (totalDays / 365).toFixed(2);
+                
+                html += `
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-slate-50 border-t-2 border-slate-200">
+                                    <td colspan="3" class="py-4 px-2 font-bold text-slate-900 text-right">TOTAL EXPERIENCE</td>
+                                    <td class="py-4 px-2 font-bold text-indigo-700 text-right text-lg">${totalDays}</td>
+                                    <td class="py-4 px-2 font-bold text-slate-800 text-right">${totalMonths}</td>
+                                    <td class="py-4 px-2 font-bold text-slate-800 text-right">${totalYears}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+                container.innerHTML = html;
+            }
+            else if (currentSection === 'education') {
+                let html = `<div class="mb-6 flex justify-end"><button onclick="addArrayItem('educacion')" class="bg-slate-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-black transition shadow-sm">+ Add Education</button></div>`;
+                
+                cvData.educacion.forEach((ed, idx) => {
+                    const lId = `edu_${idx}`;
+                    const isLocked = locks[lId];
+                    const lockIcon = isLocked ? 'lock' : 'unlock';
+                    
+                    html += `
+                    <div class="card relative pt-12">
+                        <div class="absolute top-4 right-4 flex gap-2">
+                            <button onclick="toggleLock('${lId}')" class="p-2 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-md transition" title="Lock/Unlock this block">
+                                <i data-lucide="${lockIcon}" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="removeArrayItem('educacion', ${idx})" class="p-2 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition" ${isLocked?'style="display:none"':''} title="Delete block">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-4">
+                            <div>
+                                ${renderField("Título / Degree (ES)", `edu_t_es_${idx}`, ed.titulo?.es || '', `updateArrayItem('educacion', ${idx}, 'titulo', 'es', this.value)`)}
+                            </div>
+                            <div>
+                                ${renderField("Título / Degree (EN)", `edu_t_en_${idx}`, ed.titulo?.en || '', `updateArrayItem('educacion', ${idx}, 'titulo', 'en', this.value)`)}
+                            </div>
+                            <div>
+                                ${renderField("Institución / Institution (ES)", `edu_i_es_${idx}`, ed.institucion?.es || '', `updateArrayItem('educacion', ${idx}, 'institucion', 'es', this.value)`)}
+                            </div>
+                            <div>
+                                ${renderField("Institución / Institution (EN)", `edu_i_en_${idx}`, ed.institucion?.en || '', `updateArrayItem('educacion', ${idx}, 'institucion', 'en', this.value)`)}
+                            </div>
+                            <div class="col-span-2 grid grid-cols-2 gap-6">
+                                <div>
+                                    ${renderField("Fecha de Inicio / Start Date", `edu_d1_${idx}`, ed.fecha_inicio || '', `updateArrayRoot('educacion', ${idx}, 'fecha_inicio', this.value)`, false, "", "text", "YYYY-MM-DD")}
+                                </div>
+                                <div>
+                                    ${renderField("Fecha de Fin / End Date", `edu_d2_${idx}`, ed.fecha_fin || '', `updateArrayRoot('educacion', ${idx}, 'fecha_fin', this.value)`, false, "", "text", "YYYY-MM-DD")}
+                                </div>
+                            </div>
+                            <div class="col-span-2 grid grid-cols-2 gap-6">
+                                <div>
+                                    ${renderField("Ubicación / Location (ES)", `edu_l_es_${idx}`, ed.lugar?.es || '', `updateArrayItem('educacion', ${idx}, 'lugar', 'es', this.value)`)}
+                                </div>
+                                <div>
+                                    ${renderField("Ubicación / Location (EN)", `edu_l_en_${idx}`, ed.lugar?.en || '', `updateArrayItem('educacion', ${idx}, 'lugar', 'en', this.value)`)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                if(cvData.educacion.length === 0) html += `<div class="text-center py-12 text-slate-400 font-medium">No education added yet.</div>`;
+                container.innerHTML = html;
+            } 
+            else if (currentSection === 'skills') {
+                 container.innerHTML = `
+                    <div class="flex flex-col gap-8 pb-4">
+                        <div class="grid grid-cols-2 gap-8">
+                            <div class="flex flex-col h-full">
+                                ${renderField("Habilidades - Spanish", "f_skill_es", cvData.habilidades?.es || '', "updateBilingual('habilidades', 'es', this.value)", true, "h-48")}
+                            </div>
+                            <div class="flex flex-col h-full">
+                                ${renderField("Skills - English", "f_skill_en", cvData.habilidades?.en || '', "updateBilingual('habilidades', 'en', this.value)", true, "h-48")}
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-8">
+                            <div class="flex flex-col h-full">
+                                ${renderField("Idiomas - Spanish", "f_idiomas_es", cvData.idiomas?.es || '', "updateBilingual('idiomas', 'es', this.value)", true, "h-24")}
+                            </div>
+                            <div class="flex flex-col h-full">
+                                ${renderField("Languages - English", "f_idiomas_en", cvData.idiomas?.en || '', "updateBilingual('idiomas', 'en', this.value)", true, "h-24")}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        /* Data Updaters */
+        function updateData(key, value) { cvData[key] = value; queueRefresh(); }
+        function updateNested(parent, key, value) { 
+            if(!cvData[parent]) cvData[parent] = {}; 
+            cvData[parent][key] = value; queueRefresh(); 
+        }
+        function updateBilingualNested(parent, key, lang, value) {
+            if(!cvData[parent]) cvData[parent] = {};
+            if(typeof cvData[parent][key] !== 'object' || cvData[parent][key] === null) {
+                const old = cvData[parent][key] || "";
+                cvData[parent][key] = { es: old, en: "" };
+            }
+            cvData[parent][key][lang] = value;
+            queueRefresh();
+        }
+        function updateBilingual(key, lang, value) { 
+            if(!cvData[key]) cvData[key] = {es: "", en: ""}; 
+            cvData[key][lang] = value; queueRefresh(); 
+        }
+        function updateArrayRoot(section, idx, key, value) {
+            cvData[section][idx][key] = value; queueRefresh();
+        }
+        function updateArrayItem(section, idx, key, lang, value) {
+            if(!cvData[section][idx][key]) cvData[section][idx][key] = {es:"", en:""};
+            cvData[section][idx][key][lang] = value; queueRefresh();
+        }
+        
+        function addArrayItem(section) {
+            if(section === 'experiencia') {
+                cvData.experiencia.push({
+                    puesto:{es:"",en:""}, empresa:{es:"",en:""}, lugar:{es:"",en:""}, 
+                    logros:{es:"",en:""}, fecha_inicio:"", fecha_fin:""
+                });
+            } else if(section === 'educacion') {
+                cvData.educacion.push({
+                    titulo:{es:"",en:""}, institucion:{es:"",en:""}, lugar:{es:"",en:""}, 
+                    fecha_inicio:"", fecha_fin:""
+                });
+            }
+            queueRefresh(); renderSection();
+        }
+        function removeArrayItem(section, idx) {
+            cvData[section].splice(idx, 1);
+            queueRefresh(); renderSection();
+        }
+
+        let currentPreviewLang = 'es';
+        
+        function setPreviewLang(lang) {
+            currentPreviewLang = lang;
+            const btnEs = document.getElementById('btn-preview-es');
+            const btnEn = document.getElementById('btn-preview-en');
+            if(lang === 'es') {
+                btnEs.className = "px-3 py-1.5 text-xs font-semibold rounded-md transition shadow-sm bg-white text-slate-800";
+                btnEn.className = "px-3 py-1.5 text-xs font-semibold rounded-md transition text-slate-500 hover:text-slate-700";
+            } else {
+                btnEn.className = "px-3 py-1.5 text-xs font-semibold rounded-md transition shadow-sm bg-white text-slate-800";
+                btnEs.className = "px-3 py-1.5 text-xs font-semibold rounded-md transition text-slate-500 hover:text-slate-700";
+            }
+            generatePDF(currentPreviewLang, true);
+        }
+
+        let refreshTimeout;
+        function queueRefresh() {
+            clearTimeout(refreshTimeout);
+            refreshTimeout = setTimeout(() => {
+                generatePDF(currentPreviewLang, true);
+            }, 800);
+        }
+
+        function saveJSON() {
+            const dataToSave = { ...cvData, _locks: locks };
+            const json = JSON.stringify(dataToSave, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cv_data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data._locks) {
+                        locks = data._locks;
+                        delete data._locks;
+                    }
+                    cvData = { ...cvData, ...data };
+                    renderSection();
+                    generatePDF(currentPreviewLang, true);
+                } catch (err) {
+                    alert("Error parsing JSON: " + err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        const TRANSLATIONS = {
+            es: {
+                resumen: "Resumen Profesional",
+                educacion: "Educación",
+                experiencia: "Experiencia",
+                habilidades: "Habilidades",
+                idiomas: "Idiomas",
+                presente: "Presente",
+                meses: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+            },
+            en: {
+                resumen: "Professional Summary",
+                educacion: "Education",
+                experiencia: "Experience",
+                habilidades: "Skills",
+                idiomas: "Languages",
+                presente: "Present",
+                meses: ["January","February","March","April","May","June","July","August","September","October","November","December"]
+            }
+        };
+
+        function formatDate(dateStr, lang) {
+            if (!dateStr) return TRANSLATIONS[lang].presente;
+            let parts = dateStr.split('-');
+            if (parts.length >= 2) {
+                let year = parts[0];
+                let monthIdx = parseInt(parts[1], 10) - 1;
+                if (monthIdx >= 0 && monthIdx < 12) {
+                    return TRANSLATIONS[lang].meses[monthIdx] + " " + year;
+                }
+            }
+            return dateStr;
+        }
+
+        async function generatePDF(lang, isAutoRefresh = false) {
+            if (lang === "ambos" && !isAutoRefresh) {
+                await generatePDF("es", false);
+                await generatePDF("en", false);
+                return;
+            }
+
+            if (!window.jspdf) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
+            
+            const pageWidth = 215.9;
+            const pageHeight = 279.4;
+            const leftMargin = 10.6;
+            const rightMargin = 10.6;
+            const topMargin = 12.7;
+            const bottomMargin = 4.8;
+            const lineHeight = 5;
+            let y = topMargin;
+
+            const t = TRANSLATIONS[lang];
+
+            function checkPageBreak(extra = 0) {
+                if (y + extra > pageHeight - bottomMargin) {
+                    doc.addPage();
+                    y = topMargin;
+                }
+            }
+
+            // Name
+            if (cvData.nombre) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                let w = doc.getTextWidth(cvData.nombre);
+                doc.text(cvData.nombre, (pageWidth - w) / 2, y);
+                y += lineHeight + 1;
+            }
+
+            // Contact
+            let contactParts = [];
+            const c = cvData.contacto;
+            if (c) {
+                let location = (typeof c.direccion === 'object') ? c.direccion[lang] : c.direccion;
+                if (location) contactParts.push(location);
+                if (c.email) contactParts.push(c.email);
+                if (c.telefono) contactParts.push((c.telefono_codigo ? c.telefono_codigo + ' ' : '') + c.telefono);
+                if (c.linkedin) contactParts.push(c.linkedin);
+                if (c.github) contactParts.push(c.github);
+            }
+            if (contactParts.length > 0) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(11);
+                let contactText = contactParts.join(' \u2022 ');
+                let w = doc.getTextWidth(contactText);
+                doc.text(contactText, (pageWidth - w) / 2, y);
+                y += lineHeight + 2;
+            } else {
+                y += 2;
+            }
+
+            function drawSectionHeading(title) {
+                checkPageBreak(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                
+                doc.setLineWidth(0.3);
+                doc.line(leftMargin, y - 4, pageWidth - rightMargin, y - 4);
+
+                let w = doc.getTextWidth(title);
+                doc.text(title, (pageWidth - w) / 2, y);
+                y += lineHeight + 1;
+            }
+
+            // Summary
+            const sum = cvData.resumen ? cvData.resumen[lang] : "";
+            if (sum) {
+                drawSectionHeading(t.resumen);
+                doc.setFont('helvetica', 'normal');
+                let lines = doc.splitTextToSize(sum, pageWidth - leftMargin - rightMargin);
+                for (let line of lines) {
+                    checkPageBreak(lineHeight);
+                    doc.text(line, leftMargin, y);
+                    y += lineHeight;
+                }
+                y += 2;
+            }
+
+            // Education
+            if (cvData.educacion && cvData.educacion.length > 0) {
+                drawSectionHeading(t.educacion);
+                for (let ed of cvData.educacion) {
+                    checkPageBreak(lineHeight * 2);
+                    
+                    let inst = ed.institucion ? (ed.institucion[lang] || ed.institucion) : "";
+                    let loc = ed.lugar ? (ed.lugar[lang] || ed.lugar) : "";
+                    let deg = ed.titulo ? (ed.titulo[lang] || ed.titulo) : "";
+                    
+                    let d1 = formatDate(ed.fecha_inicio, lang);
+                    let d2 = formatDate(ed.fecha_fin, lang);
+                    let dates = (d1 || d2) ? (d1 + (d2 ? " - " + d2 : "")) : "";
+
+                    // Line 1: Inst (bold) | Loc (normal)
+                    doc.setFont('helvetica', 'bold');
+                    if (inst) doc.text(inst, leftMargin, y);
+                    if (loc) {
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(loc, pageWidth - rightMargin, y, {align: 'right'});
+                    }
+                    y += lineHeight;
+
+                    // Line 2: Deg (normal) | Dates (normal)
+                    doc.setFont('helvetica', 'normal');
+                    if (deg) doc.text(deg, leftMargin, y);
+                    if (dates) {
+                        doc.text(dates, pageWidth - rightMargin, y, {align: 'right'});
+                    }
+                    y += lineHeight;
+                    y += 1;
+                }
+                y += 1;
+            }
+
+            // Experience
+            if (cvData.experiencia && cvData.experiencia.length > 0) {
+                let validExp = cvData.experiencia.filter(exp => {
+                    let d1 = exp.fecha_inicio;
+                    let d2 = exp.fecha_fin || new Date().toISOString().split('T')[0];
+                    if (d1) {
+                        let t1 = new Date(d1).getTime();
+                        let t2 = new Date(d2).getTime();
+                        let days = (t2 - t1) / (1000 * 3600 * 24);
+                        return days >= 90;
+                    }
+                    return true;
+                });
+
+                if (validExp.length > 0) {
+                    drawSectionHeading(t.experiencia);
+                    for (let exp of validExp) {
+                        checkPageBreak(lineHeight * 2);
+                        
+                        let comp = exp.empresa ? (exp.empresa[lang] || exp.empresa) : "";
+                        let loc = exp.lugar ? (exp.lugar[lang] || exp.lugar) : "";
+                        let role = exp.puesto ? (exp.puesto[lang] || exp.puesto) : "";
+                        
+                        let d1 = formatDate(exp.fecha_inicio, lang);
+                        let d2 = formatDate(exp.fecha_fin, lang);
+                        let dates = (d1 || d2) ? (d1 + (d2 ? " - " + d2 : "")) : "";
+
+                        // Line 1: Company (bold) | Loc (normal)
+                        doc.setFont('helvetica', 'bold');
+                        if (comp) doc.text(comp, leftMargin, y);
+                        if (loc) {
+                            doc.setFont('helvetica', 'normal');
+                            doc.text(loc, pageWidth - rightMargin, y, {align: 'right'});
+                        }
+                        y += lineHeight;
+
+                        // Line 2: Role (bold) | Dates (normal)
+                        doc.setFont('helvetica', 'bold');
+                        if (role) doc.text(role, leftMargin, y);
+                        if (dates) {
+                            doc.setFont('helvetica', 'normal');
+                            doc.text(dates, pageWidth - rightMargin, y, {align: 'right'});
+                        }
+                        y += lineHeight;
+
+                        // Achievements
+                        let ach = exp.logros ? (exp.logros[lang] || exp.logros) : "";
+                        if (ach) {
+                            let achLines = ach.split('\\n');
+                            const bulletChar = '\\u2022';
+                            const bulletX = leftMargin + 5;
+                            const textX = bulletX + 4;
+                            const maxW = pageWidth - rightMargin - textX;
+                            
+                            doc.setFont('helvetica', 'normal');
+                            for (let l of achLines) {
+                                if (!l.trim()) continue;
+                                checkPageBreak(lineHeight);
+                                doc.text(bulletChar, bulletX, y);
+                                let wrappedLines = doc.splitTextToSize(l.trim(), maxW);
+                                wrappedLines.forEach((wline, i) => {
+                                    checkPageBreak(lineHeight);
+                                    doc.text(wline, textX, y);
+                                    y += lineHeight;
+                                });
+                            }
+                        }
+                        y += 1;
+                    }
+                    y += 1;
+                }
+            }
+
+            // Skills & Languages
+            let skillsParts = [];
+            if (cvData.habilidades && cvData.habilidades[lang]) {
+                skillsParts.push({ label: t.habilidades, content: cvData.habilidades[lang] });
+            }
+            if (cvData.idiomas && cvData.idiomas[lang]) {
+                skillsParts.push({ label: t.idiomas, content: cvData.idiomas[lang] });
+            }
+            
+            if (skillsParts.length > 0) {
+                drawSectionHeading(t.habilidades);
+                for (let sp of skillsParts) {
+                    checkPageBreak(lineHeight);
+                    doc.setFont('helvetica', 'bold');
+                    const labelText = sp.label + ': ';
+                    doc.text(labelText, leftMargin, y);
+                    const labelW = doc.getTextWidth(labelText);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    const contentLines = doc.splitTextToSize(sp.content, pageWidth - rightMargin - leftMargin - labelW);
+                    
+                    doc.text(contentLines[0], leftMargin + labelW, y);
+                    for (let i = 1; i < contentLines.length; i++) {
+                        y += lineHeight;
+                        checkPageBreak(lineHeight);
+                        doc.text(contentLines[i], leftMargin + labelW, y);
+                    }
+                    y += lineHeight;
+                }
+            }
+
+            if (isAutoRefresh) {
+                const blobUrl = doc.output('bloburl');
+                const viewer = document.getElementById('pdf-viewer');
+                viewer.src = blobUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+                viewer.style.opacity = '1';
+                document.getElementById('pdf-placeholder').style.display = 'none';
+            } else {
+                const chk = document.getElementById('chk-date-prefix');
+                let prefix = "";
+                if (chk && chk.checked) {
+                    prefix = new Date().toISOString().split('T')[0] + "_";
+                }
+                doc.save(prefix + "CV_" + (cvData.nombre || "Document") + ".pdf");
+            }
+        }
+    </script>
+</body>
+</html>
